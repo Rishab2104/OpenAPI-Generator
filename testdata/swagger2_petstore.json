@@ -1,0 +1,94 @@
+{
+  "swagger": "2.0",
+  "info": {"title": "Pet Shop", "version": "1.0.0"},
+  "basePath": "/v2",
+  "schemes": ["http"],
+  "consumes": ["application/json"],
+  "produces": ["application/json"],
+  "securityDefinitions": {
+    "api_key": {"type": "apiKey", "name": "api_key", "in": "header"},
+    "basic": {"type": "basic"},
+    "oauth": {"type": "oauth2", "flow": "implicit", "authorizationUrl": "http://auth.example/authorize",
+              "scopes": {"read:pets": "read your pets"}}
+  },
+  "parameters": {
+    "petIdParam": {"name": "petId", "in": "path", "required": true, "type": "integer", "format": "int64"},
+    "limitParam": {"name": "limit", "in": "query", "type": "integer", "minimum": 1, "maximum": 100},
+    "petBody": {"name": "body", "in": "body", "required": true, "schema": {"$ref": "#/definitions/Pet"}}
+  },
+  "responses": {
+    "NotFound": {"description": "Not found", "schema": {"$ref": "#/definitions/Error"}}
+  },
+  "definitions": {
+    "Pet": {
+      "type": "object",
+      "required": ["name"],
+      "discriminator": "kind",
+      "properties": {
+        "id": {"type": "integer", "format": "int64"},
+        "kind": {"type": "string"},
+        "name": {"type": "string", "x-nullable": true},
+        "tags": {"type": "array", "items": {"$ref": "#/definitions/Tag"}}
+      }
+    },
+    "Tag": {"type": "object", "properties": {"id": {"type": "integer"}, "name": {"type": "string"}}},
+    "Error": {"type": "object", "properties": {"message": {"type": "string"}}}
+  },
+  "paths": {
+    "/pets": {
+      "get": {
+        "operationId": "listPets",
+        "parameters": [
+          {"$ref": "#/parameters/limitParam"},
+          {"name": "tags", "in": "query", "type": "array", "items": {"type": "string"}, "collectionFormat": "multi"},
+          {"name": "fields", "in": "query", "type": "array", "items": {"type": "string"}}
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of pets",
+            "schema": {"type": "array", "items": {"$ref": "#/definitions/Pet"}},
+            "headers": {"X-Total-Count": {"type": "integer", "description": "Total pets"}},
+            "examples": {"application/json": [{"id": 1, "name": "Rex"}]}
+          }
+        }
+      },
+      "post": {
+        "operationId": "createPet",
+        "security": [{"api_key": []}],
+        "parameters": [{"$ref": "#/parameters/petBody"}],
+        "responses": {"201": {"description": "Created"}}
+      }
+    },
+    "/pets/{petId}": {
+      "parameters": [{"$ref": "#/parameters/petIdParam"}],
+      "get": {
+        "operationId": "getPet",
+        "responses": {
+          "200": {"description": "The pet", "schema": {"$ref": "#/definitions/Pet"}},
+          "404": {"$ref": "#/responses/NotFound"}
+        }
+      },
+      "post": {
+        "operationId": "updatePetWithForm",
+        "consumes": ["application/x-www-form-urlencoded"],
+        "parameters": [
+          {"name": "name", "in": "formData", "type": "string", "required": true},
+          {"name": "status", "in": "formData", "type": "string", "enum": ["available", "sold"]}
+        ],
+        "responses": {"200": {"description": "Updated"}}
+      }
+    },
+    "/pets/{petId}/photo": {
+      "post": {
+        "operationId": "uploadPhoto",
+        "consumes": ["multipart/form-data"],
+        "parameters": [
+          {"$ref": "#/parameters/petIdParam"},
+          {"name": "file", "in": "formData", "type": "file", "required": true},
+          {"name": "caption", "in": "formData", "type": "string"}
+        ],
+        "responses": {"200": {"description": "Uploaded"}}
+      }
+    }
+  }
+}
