@@ -1,0 +1,6 @@
+/api-warden
+/api-warden.exe
+/dist/
+*.test
+coverage.out
+warden-out/
